@@ -467,12 +467,14 @@
   <div class="group" id="adminOnlyTools" style="display:none;">
     <button type="button" id="addRegionBtn">+ Add region</button>
     <button type="button" id="renameDocBtn">Rename</button>
+    <button type="button" id="setPasswordBtn">Set password</button>
     <button type="button" id="deleteDocBtn" class="danger">Delete blueprint</button>
   </div>
 
   <div class="group" id="dataToolsGroup" style="display:none;">
     <button type="button" id="exportBtn">Export data</button>
     <button type="button" id="importBtn">Import data</button>
+    <button type="button" id="exportGithubBtn">Export for GitHub</button>
     <input type="file" id="importFile" accept=".json" class="sr-only">
   </div>
 </div>
@@ -537,7 +539,7 @@
   </aside>
 </main>
 
-<footer>Antelope Valley College · CTE Welding Department</footer>
+<footer>Antelope Valley College · CTE Welding Department · Created by Caleb Healey</footer>
 
 <dialog id="regionDialog" aria-labelledby="regionDialogTitle">
   <div class="dialog-inner">
@@ -578,6 +580,43 @@
   </div>
 </dialog>
 
+<dialog id="setPasswordDialog" aria-labelledby="setPasswordDialogTitle">
+  <div class="dialog-inner">
+    <h2 id="setPasswordDialogTitle">Set viewer password</h2>
+    <p class="hint" id="setPasswordDocName" style="margin-top:-4px;"></p>
+    <form id="setPasswordForm">
+      <div class="field">
+        <label for="setPasswordInput">Password</label>
+        <input type="text" id="setPasswordInput" autocomplete="off">
+        <div class="char-count" style="text-align:left;">Leave blank so anyone can view this blueprint without a password.</div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="setPasswordCancelBtn">Cancel</button>
+        <button type="submit" class="primary">Save password</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="viewerPasswordDialog" aria-labelledby="viewerPasswordDialogTitle">
+  <div class="dialog-inner">
+    <h2 id="viewerPasswordDialogTitle">Password required</h2>
+    <p class="hint" id="viewerPasswordDocName" style="margin-top:-4px;"></p>
+    <form id="viewerPasswordForm">
+      <div class="field">
+        <label for="viewerPasswordInput">Password</label>
+        <input type="password" id="viewerPasswordInput" autocomplete="off" required>
+      </div>
+      <p id="viewerPasswordError" role="alert" style="display:none;color:var(--red);font-size:0.85rem;margin:-6px 0 12px;"></p>
+      <div class="dialog-actions">
+        <button type="button" id="viewerPasswordCancelBtn">Cancel</button>
+        <button type="submit" class="primary">Unlock</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 (function(){
@@ -673,7 +712,8 @@
     drawing: false,
     editingRegionId: null,
     draft: null,
-    zoom: 1
+    zoom: 1,
+    unlockedDocs: {}
   };
 
   /* ---------------------------------------------------------------------
@@ -696,6 +736,7 @@
   var deleteDocBtn = $("deleteDocBtn");
   var exportBtn = $("exportBtn");
   var importBtn = $("importBtn");
+  var exportGithubBtn = $("exportGithubBtn");
   var importFile = $("importFile");
   var emptyState = $("emptyState");
   var viewerBody = $("viewerBody");
@@ -728,6 +769,18 @@
   var renameForm = $("renameForm");
   var renameInput = $("renameInput");
   var renameCancelBtn = $("renameCancelBtn");
+  var setPasswordBtn = $("setPasswordBtn");
+  var setPasswordDialog = $("setPasswordDialog");
+  var setPasswordForm = $("setPasswordForm");
+  var setPasswordInput = $("setPasswordInput");
+  var setPasswordDocName = $("setPasswordDocName");
+  var setPasswordCancelBtn = $("setPasswordCancelBtn");
+  var viewerPasswordDialog = $("viewerPasswordDialog");
+  var viewerPasswordForm = $("viewerPasswordForm");
+  var viewerPasswordInput = $("viewerPasswordInput");
+  var viewerPasswordDocName = $("viewerPasswordDocName");
+  var viewerPasswordError = $("viewerPasswordError");
+  var viewerPasswordCancelBtn = $("viewerPasswordCancelBtn");
 
   function announce(msg){
     statusLive.textContent = "";
@@ -742,6 +795,10 @@
      Init
   --------------------------------------------------------------------- */
   dbGetAll().then(function(docs){
+    return loadPublishedBlueprints(docs).then(function(newDocs){
+      return docs.concat(newDocs);
+    });
+  }).then(function(docs){
     state.docs = docs.sort(function(a,b){ return a.createdAt - b.createdAt; });
     refreshDocSelect();
     if (state.docs.length){
@@ -849,6 +906,18 @@
   /* ---------------------------------------------------------------------
      Admin mode toggle
   --------------------------------------------------------------------- */
+  function refreshViewerForModeChange(){
+    var doc = currentDoc();
+    if (!doc){ renderDoc(); return; }
+    if (!state.isAdmin && doc.password && !state.unlockedDocs[doc.id]){
+      showLockedState(doc);
+    } else if (viewerBody.style.display === "none"){
+      renderDoc();
+    } else {
+      renderRegions();
+    }
+  }
+
   adminToggleBtn.addEventListener("click", function(){
     if (state.isAdmin){
       state.isAdmin = false;
@@ -861,7 +930,7 @@
       dataToolsGroup.style.display = "none";
       uploadGroup.style.display = "none";
       stopDrawingMode();
-      renderRegions();
+      refreshViewerForModeChange();
       announce("Admin mode turned off. Viewer mode active.");
     } else {
       adminPinWrap.classList.add("show");
@@ -892,7 +961,7 @@
       dataToolsGroup.style.display = "flex";
       uploadGroup.style.display = "flex";
       adminPinWrap.classList.remove("show");
-      renderRegions();
+      refreshViewerForModeChange();
       announce("Admin mode unlocked.");
     } else {
       announce("Incorrect PIN. Try again.");
@@ -990,15 +1059,18 @@
       name: name || "Untitled blueprint",
       createdAt: Date.now(),
       pages: pages,
-      regions: []
+      regions: [],
+      password: ""
     };
     dbPut(doc).then(function(){
       state.docs.push(doc);
       state.currentDocId = doc.id;
       state.currentPage = 0;
+      state.unlockedDocs[doc.id] = true;
       refreshDocSelect();
       renderDoc();
       announce("Blueprint \"" + doc.name + "\" uploaded with " + pages.length + " page" + (pages.length===1?"":"s") + ".");
+      openSetPasswordDialog(doc, true);
     }).catch(dbErrorHandler);
   }
 
@@ -1058,6 +1130,114 @@
   });
 
   /* ---------------------------------------------------------------------
+     Admin: set / change the viewer password for a blueprint
+  --------------------------------------------------------------------- */
+  var setPasswordReturnFocus = null;
+  var setPasswordIsNewUpload = false;
+
+  function openSetPasswordDialog(doc, isNewUpload){
+    setPasswordReturnFocus = document.activeElement;
+    setPasswordIsNewUpload = !!isNewUpload;
+    setPasswordDocName.textContent = isNewUpload
+      ? "Optional — set a password students must enter to view \"" + doc.name + "\"."
+      : "Blueprint: " + doc.name + (doc.password ? " (currently password protected)" : " (currently open, no password)");
+    setPasswordInput.value = isNewUpload ? "" : (doc.password || "");
+    setPasswordDialog.dataset.docId = doc.id;
+    setPasswordDialog.showModal();
+    setPasswordInput.focus();
+  }
+
+  setPasswordBtn.addEventListener("click", function(){
+    var doc = currentDoc();
+    if (!doc) return;
+    openSetPasswordDialog(doc, false);
+  });
+
+  setPasswordCancelBtn.addEventListener("click", function(){
+    setPasswordDialog.close();
+  });
+
+  setPasswordDialog.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ setPasswordDialog.close(); }
+  });
+
+  setPasswordDialog.addEventListener("close", function(){
+    if (setPasswordReturnFocus && document.contains(setPasswordReturnFocus)){ setPasswordReturnFocus.focus(); }
+  });
+
+  setPasswordForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var docId = setPasswordDialog.dataset.docId;
+    var doc = state.docs.find(function(d){ return d.id === docId; });
+    if (!doc) return;
+    var pw = setPasswordInput.value;
+    doc.password = pw;
+    dbPut(doc).then(function(){
+      state.unlockedDocs[doc.id] = true; // admin who just set it shouldn't be locked out
+      refreshDocSelect();
+      setPasswordDialog.close();
+      announce(pw
+        ? "Password set for \"" + doc.name + "\". Students will need it to view this blueprint."
+        : "Password removed from \"" + doc.name + "\". It's now open to everyone.");
+    }).catch(dbErrorHandler);
+  });
+
+  /* ---------------------------------------------------------------------
+     Viewer: unlock a password-protected blueprint
+  --------------------------------------------------------------------- */
+  var pendingUnlockDocId = null;
+  var viewerPasswordReturnFocus = null;
+
+  function openViewerPasswordDialog(doc){
+    pendingUnlockDocId = doc.id;
+    viewerPasswordReturnFocus = document.activeElement;
+    viewerPasswordDocName.textContent = "Blueprint: " + doc.name;
+    viewerPasswordInput.value = "";
+    viewerPasswordError.style.display = "none";
+    viewerPasswordDialog.showModal();
+    viewerPasswordInput.focus();
+  }
+
+  viewerPasswordCancelBtn.addEventListener("click", function(){
+    viewerPasswordDialog.close();
+  });
+
+  viewerPasswordDialog.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ viewerPasswordDialog.close(); }
+  });
+
+  viewerPasswordDialog.addEventListener("close", function(){
+    if (viewerPasswordReturnFocus && document.contains(viewerPasswordReturnFocus)){ viewerPasswordReturnFocus.focus(); }
+  });
+
+  viewerPasswordForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var doc = state.docs.find(function(d){ return d.id === pendingUnlockDocId; });
+    if (!doc) return;
+    if (viewerPasswordInput.value === doc.password){
+      state.unlockedDocs[doc.id] = true;
+      viewerPasswordDialog.close();
+      announce("Blueprint unlocked.");
+      renderDoc();
+    } else {
+      viewerPasswordError.textContent = "Incorrect password. Try again.";
+      viewerPasswordError.style.display = "block";
+      viewerPasswordInput.value = "";
+      viewerPasswordInput.focus();
+    }
+  });
+
+  function showLockedState(doc){
+    viewerBody.style.display = "none";
+    emptyState.style.display = "block";
+    emptyState.innerHTML =
+      '<p class="big">This blueprint is password protected</p>' +
+      '<p>Enter the password provided by your instructor to view &ldquo;' + escapeHtml(doc.name) + '&rdquo;.</p>' +
+      '<button type="button" id="unlockDocBtn" class="primary">Enter password</button>';
+    $("unlockDocBtn").addEventListener("click", function(){ openViewerPasswordDialog(doc); });
+  }
+
+  /* ---------------------------------------------------------------------
      Export / import
   --------------------------------------------------------------------- */
   exportBtn.addEventListener("click", function(){
@@ -1100,21 +1280,135 @@
   });
 
   /* ---------------------------------------------------------------------
+     Export a static "blueprints" folder for manual commit to GitHub Pages.
+     Structure produced:
+       blueprints/manifest.json          — list of published document ids
+       blueprints/<docId>.json           — that document's name/regions/password
+       blueprints/images/<docId>-pN.png  — that document's page images
+     Commit this folder into the repo root (overwriting any existing one)
+     and every visitor's browser will pick it up automatically on load.
+  --------------------------------------------------------------------- */
+  exportGithubBtn.addEventListener("click", function(){
+    if (!window.JSZip){
+      alert("The zip library did not load. Check your internet connection and try again.");
+      return;
+    }
+    if (!state.docs.length){
+      alert("There are no blueprints to export yet.");
+      return;
+    }
+    exportGithubBtn.disabled = true;
+    exportGithubBtn.textContent = "Building export…";
+
+    var zip = new JSZip();
+    var blueprintsFolder = zip.folder("blueprints");
+    var imagesFolder = blueprintsFolder.folder("images");
+    var manifest = [];
+
+    var work = state.docs.map(function(doc){
+      manifest.push({ id: doc.id, name: doc.name });
+      var pageWork = doc.pages.map(function(page, idx){
+        var filename = doc.id + "-p" + (idx + 1) + ".png";
+        return fetch(page.dataURL).then(function(res){ return res.blob(); }).then(function(blob){
+          imagesFolder.file(filename, blob);
+          return { width: page.width, height: page.height, image: "images/" + filename };
+        });
+      });
+      return Promise.all(pageWork).then(function(pages){
+        var docJson = {
+          id: doc.id,
+          name: doc.name,
+          password: doc.password || "",
+          regions: doc.regions,
+          pages: pages
+        };
+        blueprintsFolder.file(doc.id + ".json", JSON.stringify(docJson, null, 2));
+      });
+    });
+
+    Promise.all(work).then(function(){
+      blueprintsFolder.file("manifest.json", JSON.stringify(manifest, null, 2));
+      return zip.generateAsync({ type: "blob" });
+    }).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "blueprint-access-github-export.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+      announce("GitHub export ready. Unzip it and commit the blueprints folder to your repo.");
+    }).catch(function(err){
+      console.error(err);
+      alert("Could not build the export. " + (err && err.message ? err.message : ""));
+    }).finally(function(){
+      exportGithubBtn.disabled = false;
+      exportGithubBtn.textContent = "Export for GitHub";
+    });
+  });
+
+  /* ---------------------------------------------------------------------
+     Load any published blueprints from the site's own /blueprints folder
+     (committed there via the export above) and seed them into this
+     browser's local storage the first time it sees each one. Local edits
+     always win — a doc already in IndexedDB is never overwritten here.
+  --------------------------------------------------------------------- */
+  function loadPublishedBlueprints(existingDocs){
+    var existingIds = {};
+    existingDocs.forEach(function(d){ existingIds[d.id] = true; });
+
+    return fetch("blueprints/manifest.json").then(function(res){
+      if (!res.ok) throw new Error("no manifest");
+      return res.json();
+    }).then(function(manifest){
+      var toFetch = manifest.filter(function(entry){ return !existingIds[entry.id]; });
+      return Promise.all(toFetch.map(function(entry){
+        return fetch("blueprints/" + entry.id + ".json")
+          .then(function(res){ return res.json(); })
+          .then(function(doc){
+            doc.pages = doc.pages.map(function(p){
+              return { width: p.width, height: p.height, dataURL: "blueprints/" + p.image };
+            });
+            doc.createdAt = doc.createdAt || Date.now();
+            return doc;
+          })
+          .catch(function(){ return null; });
+      }));
+    }).then(function(fetched){
+      var newDocs = fetched.filter(Boolean);
+      if (!newDocs.length) return [];
+      return Promise.all(newDocs.map(function(doc){ return dbPut(doc); })).then(function(){ return newDocs; });
+    }).catch(function(){
+      return []; // no manifest published yet — perfectly normal, stay silent
+    });
+  }
+
+  /* ---------------------------------------------------------------------
      Render current document
   --------------------------------------------------------------------- */
   function renderDoc(){
     var doc = currentDoc();
     if (!doc){
+      emptyState.innerHTML =
+        '<p class="big">No blueprint loaded yet</p>' +
+        '<p>Turn on Admin mode (PIN required) to upload a PDF or image and start marking regions.</p>';
       emptyState.style.display = "block";
       viewerBody.style.display = "none";
       renameDocBtn.disabled = true;
+      setPasswordBtn.disabled = true;
       deleteDocBtn.disabled = true;
       return;
     }
+    renameDocBtn.disabled = false;
+    setPasswordBtn.disabled = false;
+    deleteDocBtn.disabled = false;
+
+    if (!state.isAdmin && doc.password && !state.unlockedDocs[doc.id]){
+      showLockedState(doc);
+      return;
+    }
+
     emptyState.style.display = "none";
     viewerBody.style.display = "block";
-    renameDocBtn.disabled = false;
-    deleteDocBtn.disabled = false;
 
     renderPageTabs(doc);
     renderPage(doc);

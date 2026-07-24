@@ -279,13 +279,10 @@
     flex-direction:column;
     gap:16px;
   }
-  /* When region markers are hidden, shrink the side panel so the blueprint gets the room */
+  /* When region markers are hidden, remove the side panel entirely so the
+     blueprint viewer takes the full width */
   body.markers-hidden .side-panel{
-    flex:0 0 240px;
-    min-width:0;
-  }
-  @media (max-width: 880px){
-    body.markers-hidden .side-panel{ flex-basis:auto; }
+    display:none;
   }
   .card{
     background:var(--white);
@@ -438,6 +435,8 @@
     <p>AVC Welding Department — accessible blueprint viewer</p>
   </div>
 </header>
+
+<div id="storageWarning" role="alert" style="display:none;background:#FBEAEA;color:var(--red-dark);border-bottom:2px solid var(--red);padding:12px 20px;font-size:0.9rem;font-weight:600;"></div>
 
 <div class="toolbar" role="toolbar" aria-label="Blueprint tools">
   <div class="group">
@@ -607,6 +606,28 @@
     req.onerror = function(){ reject(req.error); };
   });
 
+  function showStorageWarning(msg){
+    var el = document.getElementById("storageWarning");
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function dbErrorHandler(err){
+    console.error("Storage error:", err);
+    var reason = (err && err.message) ? err.message : String(err);
+    showStorageWarning(
+      "Nothing was saved just now — this browser blocked or failed local storage for this page (" + reason + "). " +
+      "This usually happens when the file is opened directly from disk instead of a real web address. " +
+      "Open this app at its GitHub Pages link (not by double-clicking the file), make sure you're not in private/incognito browsing, " +
+      "and check that the browser has storage permission for this site."
+    );
+  }
+
+  dbPromise.catch(function(err){
+    dbErrorHandler(err);
+  });
+
   function withStore(mode, fn){
     return dbPromise.then(function(db){
       return new Promise(function(resolve, reject){
@@ -727,7 +748,7 @@
       state.currentDocId = state.docs[0].id;
       renderDoc();
     }
-  });
+  }).catch(dbErrorHandler);
 
   function refreshDocSelect(){
     docSelect.innerHTML = "";
@@ -762,11 +783,12 @@
     var hidden = document.body.classList.toggle("markers-hidden");
     markerToggleBtn.setAttribute("aria-pressed", String(hidden));
     markerToggleBtn.textContent = hidden ? "Show region markers" : "Hide region markers";
-    setCollapseState(nowViewingToggle, activeDescription, "now viewing panel", !hidden);
-    setCollapseState(regionListToggle, regionListContent, "region list", !hidden);
+    // Reset both cards to expanded so they look normal whenever the panel reappears
+    setCollapseState(nowViewingToggle, activeDescription, "now viewing panel", true);
+    setCollapseState(regionListToggle, regionListContent, "region list", true);
     announce(hidden
-      ? "Region markers hidden. The blueprint view has expanded. Regions are still reachable with Tab."
-      : "Region markers visible on the blueprint.");
+      ? "Region markers hidden. The now viewing and region list panels are hidden, and the blueprint view has expanded. Regions are still reachable with Tab."
+      : "Region markers visible on the blueprint. The now viewing and region list panels are back.");
   });
 
   /* ---------------------------------------------------------------------
@@ -786,6 +808,18 @@
   }
   setupCollapse(nowViewingToggle, activeDescription, "now viewing panel");
   setupCollapse(regionListToggle, regionListContent, "region list");
+
+  var skipLink = document.querySelector(".skip-link");
+  skipLink.addEventListener("click", function(e){
+    if (document.body.classList.contains("markers-hidden")){
+      e.preventDefault();
+      var heading = $("viewerHeading");
+      if (heading){
+        heading.setAttribute("tabindex", "-1");
+        heading.focus();
+      }
+    }
+  });
 
   /* ---------------------------------------------------------------------
      Zoom controls
@@ -965,7 +999,7 @@
       refreshDocSelect();
       renderDoc();
       announce("Blueprint \"" + doc.name + "\" uploaded with " + pages.length + " page" + (pages.length===1?"":"s") + ".");
-    });
+    }).catch(dbErrorHandler);
   }
 
   /* ---------------------------------------------------------------------
@@ -1006,7 +1040,7 @@
       refreshDocSelect();
       renameDialog.close();
       announce("Blueprint renamed to " + doc.name + ".");
-    });
+    }).catch(dbErrorHandler);
   });
 
   deleteDocBtn.addEventListener("click", function(){
@@ -1020,7 +1054,7 @@
       refreshDocSelect();
       renderDoc();
       announce("Blueprint deleted.");
-    });
+    }).catch(dbErrorHandler);
   });
 
   /* ---------------------------------------------------------------------
@@ -1056,7 +1090,7 @@
           state.docs = docs.sort(function(a,b){ return a.createdAt - b.createdAt; });
           refreshDocSelect();
           announce("Import complete.");
-        });
+        }).catch(dbErrorHandler);
       } catch(e){
         alert("That file could not be read as a Blueprint Access export.");
       }
@@ -1384,7 +1418,7 @@
       renderRegions();
       regionDialog.close();
       announce("Region saved.");
-    });
+    }).catch(dbErrorHandler);
   });
 
   deleteRegionBtn.addEventListener("click", function(){
@@ -1396,7 +1430,7 @@
       renderRegions();
       regionDialog.close();
       announce("Region deleted.");
-    });
+    }).catch(dbErrorHandler);
   });
 
   regionDialog.addEventListener("keydown", function(e){

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blueprint Access — AVC Welding</title>
+<title>Blueprint Viewer — AVC Welding</title>
 <style>
   :root{
     --navy:#1B2A4A;
@@ -13,6 +13,7 @@
     --white:#FFFFFF;
     --gray:#F5F6F8;
     --gray-border:#D7DBE2;
+    --control-border:#707B8F;
     --text:#1B1F27;
     --text-muted:#4B5566;
     --focus:#B31B1B;
@@ -124,7 +125,7 @@
     font-family:inherit;
     font-size:0.9rem;
     padding:7px 10px;
-    border:1.5px solid var(--gray-border);
+    border:1.5px solid var(--control-border);
     border-radius:var(--radius);
     background:var(--white);
     color:var(--text);
@@ -379,6 +380,8 @@
   .region-list-admin-row .region-list-btn{flex:1;}
   .icon-btn{
     padding:4px 7px;
+    min-width:28px;
+    min-height:28px;
     font-size:0.75rem;
     border-radius:4px;
   }
@@ -431,7 +434,7 @@
 <header class="app-header">
   <div class="mark" aria-hidden="true">AVC</div>
   <div>
-    <h1>Blueprint Access</h1>
+    <h1>Blueprint Viewer</h1>
     <p>AVC Welding Department — accessible blueprint viewer</p>
   </div>
 </header>
@@ -465,7 +468,8 @@
   </div>
 
   <div class="group" id="adminOnlyTools" style="display:none;">
-    <button type="button" id="addRegionBtn">+ Add region</button>
+    <button type="button" id="addRegionBtn">+ Add region (drag)</button>
+    <button type="button" id="addRegionManualBtn">+ Add region (by coordinates)</button>
     <button type="button" id="renameDocBtn">Rename</button>
     <button type="button" id="setPasswordBtn">Set password</button>
     <button type="button" id="deleteDocBtn" class="danger">Delete blueprint</button>
@@ -555,6 +559,28 @@
         <textarea id="regionLong"></textarea>
         <div class="char-count"><span id="longCount">0</span> characters</div>
       </div>
+      <fieldset class="field" style="border:1.5px solid var(--control-border);border-radius:var(--radius);padding:12px;">
+        <legend style="font-size:0.85rem;font-weight:600;padding:0 4px;">Position &amp; size on the blueprint (percent)</legend>
+        <p class="hint" style="margin:0 0 10px;">Set automatically when you drag on the blueprint. You can also type exact values here — useful if you're working entirely by keyboard.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label for="regionXInput">Left (X)</label>
+            <input type="number" id="regionXInput" min="0" max="99" step="0.5" required>
+          </div>
+          <div>
+            <label for="regionYInput">Top (Y)</label>
+            <input type="number" id="regionYInput" min="0" max="99" step="0.5" required>
+          </div>
+          <div>
+            <label for="regionWInput">Width</label>
+            <input type="number" id="regionWInput" min="1" max="100" step="0.5" required>
+          </div>
+          <div>
+            <label for="regionHInput">Height</label>
+            <input type="number" id="regionHInput" min="1" max="100" step="0.5" required>
+          </div>
+        </div>
+      </fieldset>
       <div class="dialog-actions">
         <button type="button" id="deleteRegionBtn" class="danger" style="display:none;margin-right:auto;">Delete region</button>
         <button type="button" id="regionCancelBtn">Cancel</button>
@@ -711,7 +737,6 @@
     isAdmin: false,
     drawing: false,
     editingRegionId: null,
-    draft: null,
     zoom: 1,
     unlockedDocs: {}
   };
@@ -732,6 +757,7 @@
   var adminOnlyTools = $("adminOnlyTools");
   var dataToolsGroup = $("dataToolsGroup");
   var addRegionBtn = $("addRegionBtn");
+  var addRegionManualBtn = $("addRegionManualBtn");
   var renameDocBtn = $("renameDocBtn");
   var deleteDocBtn = $("deleteDocBtn");
   var exportBtn = $("exportBtn");
@@ -759,6 +785,10 @@
   var regionLong = $("regionLong");
   var shortCount = $("shortCount");
   var longCount = $("longCount");
+  var regionXInput = $("regionXInput");
+  var regionYInput = $("regionYInput");
+  var regionWInput = $("regionWInput");
+  var regionHInput = $("regionHInput");
   var deleteRegionBtn = $("deleteRegionBtn");
   var regionCancelBtn = $("regionCancelBtn");
   var zoomOutBtn = $("zoomOutBtn");
@@ -1245,7 +1275,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "blueprint-access-export.json";
+    a.download = "blueprint-viewer-export.json";
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -1272,7 +1302,7 @@
           announce("Import complete.");
         }).catch(dbErrorHandler);
       } catch(e){
-        alert("That file could not be read as a Blueprint Access export.");
+        alert("That file could not be read as a Blueprint Viewer export.");
       }
     };
     reader.readAsText(file);
@@ -1333,7 +1363,7 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "blueprint-access-github-export.zip";
+      a.download = "blueprint-viewer-github-export.zip";
       a.click();
       URL.revokeObjectURL(url);
       announce("GitHub export ready. Unzip it and commit the blueprints folder to your repo.");
@@ -1544,6 +1574,24 @@
       row.appendChild(btn);
 
       if (state.isAdmin){
+        var moveUpBtn = document.createElement("button");
+        moveUpBtn.type = "button";
+        moveUpBtn.className = "icon-btn";
+        moveUpBtn.textContent = "\u2191";
+        moveUpBtn.setAttribute("aria-label", "Move region " + (idx + 1) + " (" + r.shortText + ") earlier in reading order");
+        moveUpBtn.disabled = idx === 0;
+        moveUpBtn.addEventListener("click", function(){ moveRegion(r, -1); });
+        row.appendChild(moveUpBtn);
+
+        var moveDownBtn = document.createElement("button");
+        moveDownBtn.type = "button";
+        moveDownBtn.className = "icon-btn";
+        moveDownBtn.textContent = "\u2193";
+        moveDownBtn.setAttribute("aria-label", "Move region " + (idx + 1) + " (" + r.shortText + ") later in reading order");
+        moveDownBtn.disabled = idx === regions.length - 1;
+        moveDownBtn.addEventListener("click", function(){ moveRegion(r, 1); });
+        row.appendChild(moveDownBtn);
+
         var editBtn = document.createElement("button");
         editBtn.type = "button";
         editBtn.className = "icon-btn";
@@ -1556,6 +1604,25 @@
       li.appendChild(row);
       regionList.appendChild(li);
     });
+  }
+
+  function moveRegion(region, direction){
+    var doc = currentDoc();
+    if (!doc) return;
+    var regions = currentPageRegions();
+    var index = regions.findIndex(function(r){ return r.id === region.id; });
+    var swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= regions.length) return;
+    var otherRegion = regions[swapIndex];
+    var tempOrder = region.order;
+    region.order = otherRegion.order;
+    otherRegion.order = tempOrder;
+    dbPut(doc).then(function(){
+      renderRegions();
+      announce("Moved \"" + region.shortText + "\" to position " + (swapIndex + 1) + " of " + regions.length + ".");
+      var overlays = imageWrap.querySelectorAll(".region-overlay");
+      if (overlays[swapIndex]){ overlays[swapIndex].focus({ preventScroll: true }); }
+    }).catch(dbErrorHandler);
   }
 
   function escapeHtml(s){
@@ -1584,7 +1651,7 @@
     state.drawing = false;
     document.body.classList.remove("drawing-active");
     addRegionBtn.classList.remove("active-tool");
-    addRegionBtn.textContent = "+ Add region";
+    addRegionBtn.textContent = "+ Add region (drag)";
   }
 
   var dragStart = null;
@@ -1627,8 +1694,8 @@
     if (draftEl){ draftEl.remove(); draftEl = null; }
     stopDrawingMode();
 
-    if (w < 8 || h < 8){
-      announce("Region too small, try again.");
+    if (w < 24 || h < 24){
+      announce("Region too small — drag out a larger box, or use \"Add region (by coordinates)\" instead.");
       return;
     }
 
@@ -1638,8 +1705,7 @@
       w: (w / rect.width) * 100,
       h: (h / rect.height) * 100
     };
-    state.draft = pct;
-    openRegionDialog(null);
+    openRegionDialog(null, pct);
   });
 
   function updateDraftRect(x, y, w, h){
@@ -1649,12 +1715,19 @@
     draftEl.style.height = h + "px";
   }
 
+  addRegionManualBtn.addEventListener("click", function(){
+    if (!currentDoc()) return;
+    openRegionDialog(null, { x: 35, y: 35, w: 30, h: 20 });
+  });
+
   /* ---------------------------------------------------------------------
-     Region dialog (add / edit)
+     Region dialog (add / edit) — position/size are always driven by the
+     four visible number fields, whether they were filled in by dragging
+     on the blueprint or typed directly (fully keyboard-operable).
   --------------------------------------------------------------------- */
   var dialogReturnFocus = null;
 
-  function openRegionDialog(region){
+  function openRegionDialog(region, coords){
     dialogReturnFocus = document.activeElement;
     state.editingRegionId = region ? region.id : null;
     regionDialogTitle.textContent = region ? "Edit region" : "Add region";
@@ -1662,6 +1735,11 @@
     regionLong.value = region ? (region.longText || "") : "";
     shortCount.textContent = regionShort.value.length;
     longCount.textContent = regionLong.value.length;
+    var c = region ? { x: region.x, y: region.y, w: region.w, h: region.h } : (coords || { x: 35, y: 35, w: 30, h: 20 });
+    regionXInput.value = Math.round(c.x * 10) / 10;
+    regionYInput.value = Math.round(c.y * 10) / 10;
+    regionWInput.value = Math.round(c.w * 10) / 10;
+    regionHInput.value = Math.round(c.h * 10) / 10;
     deleteRegionBtn.style.display = region ? "inline-block" : "none";
     regionDialog.showModal();
     regionShort.focus();
@@ -1675,7 +1753,6 @@
   });
 
   regionDialog.addEventListener("close", function(){
-    state.draft = null;
     state.editingRegionId = null;
     if (dialogReturnFocus && document.contains(dialogReturnFocus)){ dialogReturnFocus.focus(); }
   });
@@ -1688,20 +1765,26 @@
     if (!shortText) return;
     var longText = regionLong.value.trim();
 
+    var x = clampPercent(regionXInput.value, 0, 99);
+    var y = clampPercent(regionYInput.value, 0, 99);
+    var w = clampPercent(regionWInput.value, 1, 100);
+    var h = clampPercent(regionHInput.value, 1, 100);
+
     if (state.editingRegionId){
       var existing = doc.regions.find(function(r){ return r.id === state.editingRegionId; });
       if (existing){
         existing.shortText = shortText;
         existing.longText = longText;
+        existing.x = x; existing.y = y; existing.w = w; existing.h = h;
       }
-    } else if (state.draft){
+    } else {
       var maxOrder = doc.regions
         .filter(function(r){ return r.page === state.currentPage; })
         .reduce(function(m, r){ return Math.max(m, r.order); }, -1);
       doc.regions.push({
         id: "region_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
         page: state.currentPage,
-        x: state.draft.x, y: state.draft.y, w: state.draft.w, h: state.draft.h,
+        x: x, y: y, w: w, h: h,
         shortText: shortText,
         longText: longText,
         order: maxOrder + 1
@@ -1714,6 +1797,12 @@
       announce("Region saved.");
     }).catch(dbErrorHandler);
   });
+
+  function clampPercent(value, min, max){
+    var n = parseFloat(value);
+    if (isNaN(n)) n = min;
+    return Math.min(max, Math.max(min, n));
+  }
 
   deleteRegionBtn.addEventListener("click", function(){
     var doc = currentDoc();

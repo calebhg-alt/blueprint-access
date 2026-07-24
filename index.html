@@ -183,6 +183,7 @@
     position:relative;
     display:inline-block;
     line-height:0;
+    transform-origin:top left;
   }
   #imageWrap img{
     display:block;
@@ -190,6 +191,25 @@
     height:auto;
     user-select:none;
     -webkit-user-drag:none;
+  }
+
+  .zoom-controls{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .zoom-controls button{
+    padding:6px 12px;
+    font-size:1rem;
+    line-height:1;
+  }
+  .zoom-controls #zoomLevelDisplay{
+    font-size:0.85rem;
+    font-weight:600;
+    color:var(--text-muted);
+    min-width:48px;
+    text-align:center;
   }
 
   .region-overlay{
@@ -470,6 +490,13 @@
 
       <div id="pageTabs" role="tablist" aria-label="Blueprint pages" style="display:none;"></div>
 
+      <div class="zoom-controls" role="group" aria-label="Zoom blueprint image">
+        <button type="button" id="zoomOutBtn" aria-label="Zoom out">&minus;</button>
+        <span id="zoomLevelDisplay">100%</span>
+        <button type="button" id="zoomInBtn" aria-label="Zoom in">+</button>
+        <button type="button" id="zoomResetBtn">Reset zoom</button>
+      </div>
+
       <div class="canvas-scroll">
         <div id="imageWrap">
           <img id="pageImage" alt="">
@@ -523,6 +550,22 @@
         <button type="button" id="deleteRegionBtn" class="danger" style="display:none;margin-right:auto;">Delete region</button>
         <button type="button" id="regionCancelBtn">Cancel</button>
         <button type="submit" class="primary">Save region</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="renameDialog" aria-labelledby="renameDialogTitle">
+  <div class="dialog-inner">
+    <h2 id="renameDialogTitle">Rename blueprint</h2>
+    <form id="renameForm">
+      <div class="field">
+        <label for="renameInput">Blueprint name</label>
+        <input type="text" id="renameInput" required>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="renameCancelBtn">Cancel</button>
+        <button type="submit" class="primary">Save name</button>
       </div>
     </form>
   </div>
@@ -600,7 +643,8 @@
     isAdmin: false,
     drawing: false,
     editingRegionId: null,
-    draft: null
+    draft: null,
+    zoom: 1
   };
 
   /* ---------------------------------------------------------------------
@@ -647,6 +691,14 @@
   var longCount = $("longCount");
   var deleteRegionBtn = $("deleteRegionBtn");
   var regionCancelBtn = $("regionCancelBtn");
+  var zoomOutBtn = $("zoomOutBtn");
+  var zoomInBtn = $("zoomInBtn");
+  var zoomResetBtn = $("zoomResetBtn");
+  var zoomLevelDisplay = $("zoomLevelDisplay");
+  var renameDialog = $("renameDialog");
+  var renameForm = $("renameForm");
+  var renameInput = $("renameInput");
+  var renameCancelBtn = $("renameCancelBtn");
 
   function announce(msg){
     statusLive.textContent = "";
@@ -722,6 +774,31 @@
   }
   setupCollapse(nowViewingToggle, activeDescription, "now viewing panel");
   setupCollapse(regionListToggle, regionListContent, "region list");
+
+  /* ---------------------------------------------------------------------
+     Zoom controls
+  --------------------------------------------------------------------- */
+  function applyZoom(){
+    imageWrap.style.transform = "scale(" + state.zoom + ")";
+    zoomLevelDisplay.textContent = Math.round(state.zoom * 100) + "%";
+    zoomOutBtn.disabled = state.zoom <= 0.5;
+    zoomInBtn.disabled = state.zoom >= 3;
+  }
+  zoomInBtn.addEventListener("click", function(){
+    state.zoom = Math.min(3, Math.round((state.zoom + 0.25) * 100) / 100);
+    applyZoom();
+    announce("Zoom " + Math.round(state.zoom * 100) + " percent");
+  });
+  zoomOutBtn.addEventListener("click", function(){
+    state.zoom = Math.max(0.5, Math.round((state.zoom - 0.25) * 100) / 100);
+    applyZoom();
+    announce("Zoom " + Math.round(state.zoom * 100) + " percent");
+  });
+  zoomResetBtn.addEventListener("click", function(){
+    state.zoom = 1;
+    applyZoom();
+    announce("Zoom reset to 100 percent");
+  });
 
   /* ---------------------------------------------------------------------
      Admin mode toggle
@@ -876,17 +953,42 @@
   /* ---------------------------------------------------------------------
      Rename / delete document
   --------------------------------------------------------------------- */
+  var renameReturnFocus = null;
+
   renameDocBtn.addEventListener("click", function(){
     var doc = currentDoc();
     if (!doc) return;
-    var name = window.prompt("Rename blueprint:", doc.name);
-    if (name && name.trim()){
-      doc.name = name.trim();
-      dbPut(doc).then(function(){
-        refreshDocSelect();
-        announce("Blueprint renamed to " + doc.name + ".");
-      });
-    }
+    renameReturnFocus = document.activeElement;
+    renameInput.value = doc.name;
+    renameDialog.showModal();
+    renameInput.focus();
+    renameInput.select();
+  });
+
+  renameCancelBtn.addEventListener("click", function(){
+    renameDialog.close();
+  });
+
+  renameDialog.addEventListener("close", function(){
+    if (renameReturnFocus && document.contains(renameReturnFocus)){ renameReturnFocus.focus(); }
+  });
+
+  renameDialog.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ renameDialog.close(); }
+  });
+
+  renameForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var doc = currentDoc();
+    if (!doc) return;
+    var name = renameInput.value.trim();
+    if (!name) return;
+    doc.name = name;
+    dbPut(doc).then(function(){
+      refreshDocSelect();
+      renameDialog.close();
+      announce("Blueprint renamed to " + doc.name + ".");
+    });
   });
 
   deleteDocBtn.addEventListener("click", function(){
@@ -993,6 +1095,8 @@
     pageImage.src = page.dataURL;
     pageImage.alt = "";
     pageImage.setAttribute("role", "presentation");
+    state.zoom = 1;
+    applyZoom();
     renderRegions();
     activeDescription.innerHTML = '<p class="empty">Select or focus a region to see its full description here.</p>';
   }

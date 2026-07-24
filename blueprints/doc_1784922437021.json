@@ -1,0 +1,80 @@
+{
+  "id": "doc_1784922437021",
+  "name": "Welding Symbols",
+  "password": "",
+  "regions": [
+    {
+      "id": "region_1784922575011_md315",
+      "page": 0,
+      "x": 26.968173884866225,
+      "y": 0.12235594610022232,
+      "w": 46.10552763819096,
+      "h": 13.008261107547503,
+      "shortText": "Joint 1",
+      "longText": "T-joint formed by a vertical plate (0.5\" thick × 2.0\" long) welded perpendicular to a horizontal plate (2.0\" long, 0.5\" thick). The symbol has a horizontal reference line with a diagonal leader line extending down and to the left, ending in an arrowhead at the joint. \nWeld Symbol: A small solid rectangle sits directly below the reference line. Just above that same point, a shape formed by a diagonal line meeting a vertical line, has the text 1/4\" sitting in symbol, to the left of this symbol is the text 1/4\"Directly above that shape, a solid filled triangle is stacked on top, with the text 1/4\"\" positioned to its left as well.",
+      "order": 0
+    },
+    {
+      "id": "region_1784922908867_fh6uq",
+      "page": 0,
+      "x": 26.85941915223284,
+      "y": 13.02797351135037,
+      "w": 46.26068880805027,
+      "h": 12.61666859775934,
+      "shortText": "Joint 2",
+      "longText": "T-joint formed by a vertical plate (0.5\" thick × 2.0\" long) welded perpendicular to a horizontal plate (2.0\" long, 0.5\" thick). The symbol has a horizontal reference line with a diagonal leader line extending down and to the left, ending in an arrowhead at the joint.\n\nWeld Symbol: Below the reference line, a shape formed by a curved line meeting a straight line sits at the point where the leader line meets the reference line, with the text 1/4\" sitting inside the symbol. To the left of this symbol is the text 5/16\" followed by (5/16\") in parentheses. Above the reference line, a matching shape formed by a curved line meeting a straight line appears directly opposite it, with the text 1/4\" sitting inside the symbol. To the left of this symbol is the text 3/16\" followed by (3/16\") in parentheses. Directly above that shape, a solid filled triangle is stacked on top, with the text 5/16\" positioned to its left. At the right end of the reference line, a forked tail line extends outward, with the letters C J P written beside it.",
+      "order": 1
+    },
+    {
+      "id": "region_1784922933755_jlo5i",
+      "page": 0,
+      "x": 26.85941915223284,
+      "y": 25.761463114644517,
+      "w": 46.4118675296452,
+      "h": 12.967131614363764,
+      "shortText": "Joint 3",
+      "longText": "Butt joint formed by two plates in the same plane, each 0.5\" thick, joined edge to edge. The bottom of the plates is dimensioned at 1.5000\" to the near edge and 2.7299\" to the far edge.\n\nWeld Symbol: Two horizontal reference lines are stacked one above the other. A leader line angles down and to the left from the lower reference line, ending in an arrowhead at the joint.\n\nOn the lower reference line: below the line, a shape formed by a diagonal line meeting a vertical line sits at the point where the leader line meets it, with the text 1/4\" to the left of the shape and (1/2\") in parentheses beside it. To the right of this shape, a peak-shaped mark points upward with the text 1/4\" beside it. Below that, the text 36° appears above the letter G, separated by a horizontal line.\n\nOn the upper reference line: above the line, a curved bump shape sits along the line, with the text 1/8\" to its left",
+      "order": 2
+    },
+    {
+      "id": "region_1784922959039_sa25r",
+      "page": 0,
+      "x": 27.010597873827773,
+      "y": 38.65071613829,
+      "w": 45.95833136486039,
+      "h": 12.61666859775934,
+      "shortText": "Joint 4",
+      "longText": "Plate assembly formed by a vertical plate (0.5\" thick, 2.0\" tall) with a horizontal arm (2.0\" long) extending from partway up its height, creating a stepped, L-shaped profile. A bent leader line extends from the reference line and breaks at an angle, pointing to the vertical connection point of the joint.\n\nWeld Symbol: Below the reference line, a small solid rectangle sits at the point where the leader line meets it. Above the reference line, a shape formed by a diagonal line meeting a vertical line appears at the same point, with the text 3/16\" positioned at the break in the reference line, and the text 45° positioned above the shape. At the right end of the reference line, a forked tail line extends outward, with the letters F C A W and C P J written beside it.",
+      "order": 3
+    },
+    {
+      "id": "region_1784922970129_735er",
+      "page": 0,
+      "x": 27.010597873827773,
+      "y": 51.03374361625327,
+      "w": 46.26068880805027,
+      "h": 13.434415636503,
+      "shortText": "Joint 5",
+      "longText": "T-joint formed by a vertical plate (0.5\" thick × 2.0\" long) welded perpendicular to a horizontal plate (2.0\" long, 0.5\" thick). An additional dimension of 1.0000\" is marked partway up the vertical plate — let me know what that measurement refers to before I include it, since I don't want to guess at its purpose. The symbol has a horizontal reference line with a diagonal leader line extending down and to the left, ending in an arrowhead at the joint.\n\nWeld Symbol: Below the reference line, a solid filled triangle sits at the point where the leader line meets it, with the text 3/8\" to its left and the text 1-3 to its right. Above the reference line, a matching solid filled triangle appears directly opposite it, with the text 3/8\" to its left and the text 1-3 to its right as well. At the right end of the reference line, a forked tail line extends outward, with the text \"Note A\" written beside it.\n\nBelow the joint drawing, separate from the symbol itself, a note reads: \"NOTE A: Material is 9 inches in length.\"",
+      "order": 4
+    },
+    {
+      "id": "region_1784922985245_pjria",
+      "page": 0,
+      "x": 27.010597873827773,
+      "y": 64.35133824722146,
+      "w": 45.95833136486039,
+      "h": 35.39676467704703,
+      "shortText": "Joint 6",
+      "longText": "T-joint formed by a round tube/pipe welded vertically onto a flat base plate, shown in two views: a top view (looking down at the plate and the circular pipe opening) and a front view (looking at the plate and pipe from the side).\n\nTop view: a square base plate, 5.0000\" wide and 5.0000\" tall, with a circular pipe cross-section centered on it. The distance from the left edge of the plate to the center of the circle is 2.5000\" horizontally, and the distance from the bottom edge to the center is 2.5000\" vertically. A dimension line runs diagonally from the center of the circle to its edge, labeled 1.2500\", indicating the radius of the circle.\n\nFront view: the base plate is 0.5000\" thick. The pipe rises 2.0000\" above the plate and is 0.2500\" wide as drawn in this view, shown with dashed lines indicating its hidden/curved edges.\n\nWeld Symbol: A small circle sits at the point where the reference line and the leader line meet, indicating the weld goes all around the joint. The leader line angles down and to the left from that point, ending in an arrowhead at the joint. Along the reference line, a shape formed by a diagonal line meeting a vertical line appears, with the text 1/4\" positioned at the shape and the text 22.5° positioned near it. At the right end of the reference line, a forked tail line extends outward, with the letters G T A W written beside it.",
+      "order": 5
+    }
+  ],
+  "pages": [
+    {
+      "width": 2448,
+      "height": 3168,
+      "image": "images/doc_1784922437021-p1.png"
+    }
+  ]
+}

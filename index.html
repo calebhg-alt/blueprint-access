@@ -272,8 +272,38 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
+    gap:10px;
   }
   .card p.hint{font-size:0.82rem;color:var(--text-muted);margin:0 0 10px;}
+
+  .collapse-btn{
+    flex:0 0 auto;
+    width:28px;height:28px;
+    padding:0;
+    line-height:1;
+    font-size:1.1rem;
+    border-radius:5px;
+  }
+
+  /* Marker visibility toggle — hides visual boxes/badges but keeps every
+     region focusable and announced; hover/focus still reveal them briefly
+     so mouse and keyboard users can still orient themselves. */
+  body.markers-hidden .region-overlay{
+    border-color:transparent !important;
+    background:transparent !important;
+  }
+  body.markers-hidden .region-overlay .badge{
+    display:none;
+  }
+  body.markers-hidden .region-overlay:hover,
+  body.markers-hidden .region-overlay:focus-visible{
+    border-color:var(--red) !important;
+    background:rgba(179,27,27,0.18) !important;
+  }
+  body.markers-hidden .region-overlay:hover .badge,
+  body.markers-hidden .region-overlay:focus-visible .badge{
+    display:block;
+  }
 
   #activeDescription{
     min-height:90px;
@@ -393,6 +423,10 @@
   </div>
 
   <div class="group">
+    <button type="button" id="markerToggleBtn" aria-pressed="false">Hide region markers</button>
+  </div>
+
+  <div class="group">
     <button type="button" id="adminToggleBtn" aria-pressed="false">Admin mode</button>
     <span id="adminPinWrap">
       <label for="pinInput" class="sr-only">Enter admin PIN</label>
@@ -447,16 +481,24 @@
 
   <aside class="side-panel">
     <div class="card">
-      <h2>Now viewing</h2>
+      <h2>
+        <span>Now viewing</span>
+        <button type="button" class="collapse-btn" id="nowViewingToggle" aria-expanded="true" aria-controls="activeDescription" aria-label="Collapse now viewing panel">&minus;</button>
+      </h2>
       <div id="activeDescription">
         <p class="empty">Select or focus a region to see its full description here.</p>
       </div>
     </div>
 
     <div class="card">
-      <h2 id="regionListHeading">Region list <span id="regionCount" style="color:var(--text-muted);font-weight:400;"></span></h2>
-      <p class="hint">Every marked area on the current page, in reading order.</p>
-      <ol id="regionList"></ol>
+      <h2 id="regionListHeading">
+        <span>Region list <span id="regionCount" style="color:var(--text-muted);font-weight:400;"></span></span>
+        <button type="button" class="collapse-btn" id="regionListToggle" aria-expanded="true" aria-controls="regionListContent" aria-label="Collapse region list">&minus;</button>
+      </h2>
+      <div id="regionListContent">
+        <p class="hint">Every marked area on the current page, in reading order.</p>
+        <ol id="regionList"></ol>
+      </div>
     </div>
   </aside>
 </main>
@@ -591,6 +633,10 @@
   var activeDescription = $("activeDescription");
   var regionList = $("regionList");
   var regionCount = $("regionCount");
+  var markerToggleBtn = $("markerToggleBtn");
+  var nowViewingToggle = $("nowViewingToggle");
+  var regionListToggle = $("regionListToggle");
+  var regionListContent = $("regionListContent");
   var statusLive = $("statusLive");
   var regionDialog = $("regionDialog");
   var regionForm = $("regionForm");
@@ -647,6 +693,35 @@
     state.currentPage = 0;
     renderDoc();
   });
+
+  /* ---------------------------------------------------------------------
+     Region marker visibility toggle (for sighted users who don't need
+     screen-reader navigation and prefer a clean drawing)
+  --------------------------------------------------------------------- */
+  markerToggleBtn.addEventListener("click", function(){
+    var hidden = document.body.classList.toggle("markers-hidden");
+    markerToggleBtn.setAttribute("aria-pressed", String(hidden));
+    markerToggleBtn.textContent = hidden ? "Show region markers" : "Hide region markers";
+    announce(hidden
+      ? "Region markers hidden from view. Regions are still reachable with Tab and listed in the region list."
+      : "Region markers visible on the blueprint.");
+  });
+
+  /* ---------------------------------------------------------------------
+     Collapsible sidebar sections
+  --------------------------------------------------------------------- */
+  function setupCollapse(toggleBtn, contentEl, label){
+    toggleBtn.addEventListener("click", function(){
+      var expanded = toggleBtn.getAttribute("aria-expanded") === "true";
+      var next = !expanded;
+      toggleBtn.setAttribute("aria-expanded", String(next));
+      contentEl.style.display = next ? "" : "none";
+      toggleBtn.textContent = next ? "\u2212" : "+";
+      toggleBtn.setAttribute("aria-label", (next ? "Collapse " : "Expand ") + label);
+    });
+  }
+  setupCollapse(nowViewingToggle, activeDescription, "now viewing panel");
+  setupCollapse(regionListToggle, regionListContent, "region list");
 
   /* ---------------------------------------------------------------------
      Admin mode toggle

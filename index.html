@@ -279,6 +279,14 @@
     flex-direction:column;
     gap:16px;
   }
+  /* When region markers are hidden, shrink the side panel so the blueprint gets the room */
+  body.markers-hidden .side-panel{
+    flex:0 0 240px;
+    min-width:0;
+  }
+  @media (max-width: 880px){
+    body.markers-hidden .side-panel{ flex-basis:auto; }
+  }
   .card{
     background:var(--white);
     border:1px solid var(--gray-border);
@@ -754,22 +762,26 @@
     var hidden = document.body.classList.toggle("markers-hidden");
     markerToggleBtn.setAttribute("aria-pressed", String(hidden));
     markerToggleBtn.textContent = hidden ? "Show region markers" : "Hide region markers";
+    setCollapseState(nowViewingToggle, activeDescription, "now viewing panel", !hidden);
+    setCollapseState(regionListToggle, regionListContent, "region list", !hidden);
     announce(hidden
-      ? "Region markers hidden from view. Regions are still reachable with Tab and listed in the region list."
+      ? "Region markers hidden. The blueprint view has expanded. Regions are still reachable with Tab."
       : "Region markers visible on the blueprint.");
   });
 
   /* ---------------------------------------------------------------------
      Collapsible sidebar sections
   --------------------------------------------------------------------- */
+  function setCollapseState(toggleBtn, contentEl, label, expanded){
+    toggleBtn.setAttribute("aria-expanded", String(expanded));
+    contentEl.style.display = expanded ? "" : "none";
+    toggleBtn.textContent = expanded ? "\u2212" : "+";
+    toggleBtn.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + label);
+  }
   function setupCollapse(toggleBtn, contentEl, label){
     toggleBtn.addEventListener("click", function(){
       var expanded = toggleBtn.getAttribute("aria-expanded") === "true";
-      var next = !expanded;
-      toggleBtn.setAttribute("aria-expanded", String(next));
-      contentEl.style.display = next ? "" : "none";
-      toggleBtn.textContent = next ? "\u2212" : "+";
-      toggleBtn.setAttribute("aria-label", (next ? "Collapse " : "Expand ") + label);
+      setCollapseState(toggleBtn, contentEl, label, !expanded);
     });
   }
   setupCollapse(nowViewingToggle, activeDescription, "now viewing panel");
@@ -916,7 +928,13 @@
 
   function renderPdfPage(pdf, pageNum){
     return pdf.getPage(pageNum).then(function(page){
-      var scale = 2;
+      var baseViewport = page.getViewport({ scale: 1 });
+      var scale = 4; // higher base resolution so zooming in the viewer stays sharp
+      var maxDimension = 6000; // stay well under browser canvas size limits
+      var longestSide = Math.max(baseViewport.width, baseViewport.height);
+      if (longestSide * scale > maxDimension){
+        scale = maxDimension / longestSide;
+      }
       var viewport = page.getViewport({ scale: scale });
       var canvas = document.createElement("canvas");
       canvas.width = viewport.width;

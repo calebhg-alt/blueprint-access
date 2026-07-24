@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blueprint Access — AVC Welding</title>
+<style>
+  :root{
+    --navy:#1B2A4A;
+    --navy-light:#2A3E67;
+    --red:#B31B1B;
+    --red-dark:#8C1515;
+    --white:#FFFFFF;
+    --gray:#F5F6F8;
+    --gray-border:#D7DBE2;
+    --text:#1B1F27;
+    --text-muted:#4B5566;
+    --focus:#B31B1B;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+    background:var(--gray);
+    color:var(--text);
+    line-height:1.5;
+  }
+  a{color:var(--navy);}
+
+  /* Visible focus for every focusable element — WCAG 2.4.7 */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible{
+    outline:3px solid var(--focus);
+    outline-offset:2px;
+    border-radius:3px;
+  }
+
+  .skip-link{
+    position:absolute;
+    left:-9999px;
+    top:0;
+    background:var(--red);
+    color:var(--white);
+    padding:10px 16px;
+    z-index:200;
+    font-weight:600;
+    text-decoration:none;
+    border-radius:0 0 6px 0;
+  }
+  .skip-link:focus{left:0;}
+
+  header.app-header{
+    background:var(--navy);
+    color:var(--white);
+    padding:16px 20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    border-bottom:4px solid var(--red);
+  }
+  header.app-header .mark{
+    width:38px;height:38px;flex:0 0 auto;
+    background:var(--red);
+    border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;letter-spacing:0.5px;
+  }
+  header.app-header h1{
+    font-size:1.15rem;
+    margin:0;
+    font-weight:700;
+  }
+  header.app-header p{
+    margin:2px 0 0;
+    font-size:0.85rem;
+    color:#C9D2E3;
+  }
+
+  .toolbar{
+    background:var(--white);
+    border-bottom:1px solid var(--gray-border);
+    padding:12px 20px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+  }
+  .toolbar .group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding-right:12px;
+    border-right:1px solid var(--gray-border);
+  }
+  .toolbar .group:last-child{border-right:none;}
+  label{font-size:0.85rem;font-weight:600;color:var(--text-muted);}
+
+  button, .btn{
+    font-family:inherit;
+    font-size:0.9rem;
+    font-weight:600;
+    padding:8px 14px;
+    border-radius:var(--radius);
+    border:1.5px solid var(--navy);
+    background:var(--white);
+    color:var(--navy);
+    cursor:pointer;
+  }
+  button:hover, .btn:hover{background:var(--gray);}
+  button.primary{background:var(--navy);color:var(--white);}
+  button.primary:hover{background:var(--navy-light);}
+  button.danger{border-color:var(--red);color:var(--red);}
+  button.danger:hover{background:#FBEAEA;}
+  button.active-tool{background:var(--red);border-color:var(--red);color:var(--white);}
+  button:disabled{opacity:0.5;cursor:not-allowed;}
+
+  select, input[type=text], input[type=password], textarea{
+    font-family:inherit;
+    font-size:0.9rem;
+    padding:7px 10px;
+    border:1.5px solid var(--gray-border);
+    border-radius:var(--radius);
+    background:var(--white);
+    color:var(--text);
+  }
+  input[type=file]{font-size:0.85rem;}
+
+  #adminPinWrap{display:none;align-items:center;gap:8px;}
+  #adminPinWrap.show{display:flex;}
+
+  .admin-badge{
+    background:var(--red);
+    color:var(--white);
+    font-size:0.75rem;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:20px;
+    letter-spacing:0.3px;
+  }
+
+  main{
+    display:flex;
+    gap:18px;
+    padding:18px 20px 40px;
+    max-width:1500px;
+    margin:0 auto;
+    align-items:flex-start;
+  }
+  @media (max-width: 880px){
+    main{flex-direction:column;}
+  }
+
+  .viewer-panel{
+    flex:1 1 65%;
+    min-width:0;
+    background:var(--white);
+    border:1px solid var(--gray-border);
+    border-radius:8px;
+    padding:16px;
+  }
+  .viewer-panel h2{margin-top:0;font-size:1rem;color:var(--navy);}
+
+  #emptyState{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text-muted);
+  }
+  #emptyState .big{font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:6px;}
+
+  .canvas-scroll{
+    overflow:auto;
+    border:1px solid var(--gray-border);
+    border-radius:6px;
+    background:repeating-conic-gradient(#f0f1f4 0% 25%, #fafafb 0% 50%) 50% / 20px 20px;
+  }
+  #imageWrap{
+    position:relative;
+    display:inline-block;
+    line-height:0;
+  }
+  #imageWrap img{
+    display:block;
+    max-width:100%;
+    height:auto;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+
+  .region-overlay{
+    position:absolute;
+    border:2px solid transparent;
+    background:rgba(179,27,27,0);
+    border-radius:3px;
+    cursor:pointer;
+    padding:0;
+  }
+  .region-overlay .badge{
+    position:absolute;
+    top:-2px;left:-2px;
+    background:var(--navy);
+    color:var(--white);
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+    padding:3px 5px;
+    border-radius:0 0 4px 0;
+    pointer-events:none;
+  }
+  /* Always show a faint outline so sighted keyboard users can see targets exist */
+  body.mode-view .region-overlay{
+    border-color:rgba(27,42,74,0.35);
+  }
+  .region-overlay:hover,
+  .region-overlay:focus-visible{
+    background:rgba(179,27,27,0.18);
+    border-color:var(--red);
+  }
+  body.mode-admin .region-overlay{
+    border:2px dashed var(--navy);
+    background:rgba(27,42,74,0.08);
+  }
+  body.mode-admin .region-overlay:hover,
+  body.mode-admin .region-overlay:focus-visible{
+    border-color:var(--red);
+    background:rgba(179,27,27,0.15);
+  }
+  #drawLayer{
+    position:absolute;
+    inset:0;
+  }
+  body.drawing-active #drawLayer{cursor:crosshair;}
+  .draft-rect{
+    position:absolute;
+    border:2px solid var(--red);
+    background:rgba(179,27,27,0.15);
+    pointer-events:none;
+  }
+
+  .sr-only{
+    position:absolute;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+
+  .side-panel{
+    flex:1 1 35%;
+    min-width:280px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .card{
+    background:var(--white);
+    border:1px solid var(--gray-border);
+    border-radius:8px;
+    padding:16px;
+  }
+  .card h2{
+    margin:0 0 10px;
+    font-size:0.95rem;
+    color:var(--navy);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .card p.hint{font-size:0.82rem;color:var(--text-muted);margin:0 0 10px;}
+
+  #activeDescription{
+    min-height:90px;
+    border:1px solid var(--gray-border);
+    background:var(--gray);
+    border-radius:6px;
+    padding:12px;
+    font-size:0.9rem;
+  }
+  #activeDescription .title{font-weight:700;color:var(--navy);margin:0 0 4px;}
+  #activeDescription .empty{color:var(--text-muted);font-style:italic;}
+
+  ol#regionList{
+    list-style:none;
+    margin:0;padding:0;
+    max-height:340px;
+    overflow-y:auto;
+  }
+  ol#regionList li{border-bottom:1px solid var(--gray-border);}
+  ol#regionList li:last-child{border-bottom:none;}
+  .region-list-btn{
+    width:100%;
+    text-align:left;
+    border:none;
+    border-radius:0;
+    background:transparent;
+    padding:9px 6px;
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    color:var(--text);
+    font-weight:400;
+  }
+  .region-list-btn:hover{background:var(--gray);}
+  .region-list-btn .num{
+    flex:0 0 auto;
+    background:var(--navy);
+    color:var(--white);
+    font-size:11px;
+    font-weight:700;
+    width:20px;height:20px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .region-list-btn .lbl{font-size:0.87rem;}
+  .region-list-btn .lbl .short{display:block;font-weight:600;}
+  .region-list-admin-row{display:flex;align-items:center;gap:4px;}
+  .region-list-admin-row .region-list-btn{flex:1;}
+  .icon-btn{
+    padding:4px 7px;
+    font-size:0.75rem;
+    border-radius:4px;
+  }
+
+  dialog#regionDialog{
+    border:none;
+    border-radius:10px;
+    padding:0;
+    max-width:480px;
+    width:92vw;
+    box-shadow:0 12px 40px rgba(0,0,0,0.25);
+  }
+  dialog#regionDialog::backdrop{background:rgba(15,20,35,0.55);}
+  .dialog-inner{padding:20px;}
+  .dialog-inner h2{margin:0 0 4px;color:var(--navy);font-size:1.05rem;}
+  .dialog-inner .field{margin-bottom:14px;}
+  .dialog-inner .field label{display:block;margin-bottom:5px;}
+  .dialog-inner input[type=text], .dialog-inner textarea{width:100%;}
+  .dialog-inner textarea{resize:vertical;min-height:70px;}
+  .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+  .char-count{font-size:0.75rem;color:var(--text-muted);margin-top:3px;text-align:right;}
+
+  footer{
+    text-align:center;
+    font-size:0.8rem;
+    color:var(--text-muted);
+    padding:20px;
+  }
+
+  .visually-instr{
+    font-size:0.85rem;
+    background:#EEF1F7;
+    border-left:4px solid var(--navy);
+    padding:10px 12px;
+    border-radius:4px;
+    margin-bottom:14px;
+  }
+
+  #pageTabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  #pageTabs button[aria-selected="true"]{background:var(--navy);color:var(--white);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body class="mode-view">
+<a class="skip-link" href="#regionListHeading">Skip to blueprint region list</a>
+
+<header class="app-header">
+  <div class="mark" aria-hidden="true">AVC</div>
+  <div>
+    <h1>Blueprint Access</h1>
+    <p>AVC Welding Department — accessible blueprint viewer</p>
+  </div>
+</header>
+
+<div class="toolbar" role="toolbar" aria-label="Blueprint tools">
+  <div class="group">
+    <label for="docSelect">Blueprint</label>
+    <select id="docSelect" aria-label="Select blueprint document"></select>
+  </div>
+
+  <div class="group" id="uploadGroup" style="display:none;">
+    <label for="fileInput">Upload PDF or image</label>
+    <input type="file" id="fileInput" accept=".pdf,image/png,image/jpeg">
+  </div>
+
+  <div class="group">
+    <button type="button" id="adminToggleBtn" aria-pressed="false">Admin mode</button>
+    <span id="adminPinWrap">
+      <label for="pinInput" class="sr-only">Enter admin PIN</label>
+      <input type="password" id="pinInput" placeholder="PIN" inputmode="numeric" style="width:80px;" maxlength="8">
+      <button type="button" id="pinSubmit" class="primary">Unlock</button>
+      <button type="button" id="pinCancel">Cancel</button>
+    </span>
+    <span id="adminActiveBadge" class="admin-badge" style="display:none;">ADMIN</span>
+  </div>
+
+  <div class="group" id="adminOnlyTools" style="display:none;">
+    <button type="button" id="addRegionBtn">+ Add region</button>
+    <button type="button" id="renameDocBtn">Rename</button>
+    <button type="button" id="deleteDocBtn" class="danger">Delete blueprint</button>
+  </div>
+
+  <div class="group" id="dataToolsGroup" style="display:none;">
+    <button type="button" id="exportBtn">Export data</button>
+    <button type="button" id="importBtn">Import data</button>
+    <input type="file" id="importFile" accept=".json" class="sr-only">
+  </div>
+</div>
+
+<div id="statusLive" class="sr-only" role="status" aria-live="polite"></div>
+
+<main>
+  <section class="viewer-panel" aria-labelledby="viewerHeading">
+    <h2 id="viewerHeading">Blueprint viewer</h2>
+
+    <div id="emptyState">
+      <p class="big">No blueprint loaded yet</p>
+      <p>Turn on Admin mode (PIN required) to upload a PDF or image and start marking regions.</p>
+    </div>
+
+    <div id="viewerBody" style="display:none;">
+      <p class="visually-instr" id="instructions">
+        Press Tab to move through the numbered regions on this drawing. Each region announces its
+        description when it receives focus. You can also browse every description in the
+        <a href="#regionListHeading">region list</a> without needing to locate items visually.
+      </p>
+
+      <div id="pageTabs" role="tablist" aria-label="Blueprint pages" style="display:none;"></div>
+
+      <div class="canvas-scroll">
+        <div id="imageWrap">
+          <img id="pageImage" alt="">
+          <div id="drawLayer"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side-panel">
+    <div class="card">
+      <h2>Now viewing</h2>
+      <div id="activeDescription">
+        <p class="empty">Select or focus a region to see its full description here.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="regionListHeading">Region list <span id="regionCount" style="color:var(--text-muted);font-weight:400;"></span></h2>
+      <p class="hint">Every marked area on the current page, in reading order.</p>
+      <ol id="regionList"></ol>
+    </div>
+  </aside>
+</main>
+
+<footer>Antelope Valley College · CTE Welding Department</footer>
+
+<dialog id="regionDialog" aria-labelledby="regionDialogTitle">
+  <div class="dialog-inner">
+    <h2 id="regionDialogTitle">Add region</h2>
+    <form id="regionForm">
+      <div class="field">
+        <label for="regionShort">Short label (announced first, like alt text)</label>
+        <input type="text" id="regionShort" maxlength="120" required>
+        <div class="char-count"><span id="shortCount">0</span>/120</div>
+      </div>
+      <div class="field">
+        <label for="regionLong">Detailed description (read on request — dimensions, weld symbol meaning, notes)</label>
+        <textarea id="regionLong" maxlength="600"></textarea>
+        <div class="char-count"><span id="longCount">0</span>/600</div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="deleteRegionBtn" class="danger" style="display:none;margin-right:auto;">Delete region</button>
+        <button type="button" id="regionCancelBtn">Cancel</button>
+        <button type="submit" class="primary">Save region</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------------------
+     Config
+  --------------------------------------------------------------------- */
+  var ADMIN_PIN = "7018";
+  var DB_NAME = "avc-blueprint-access";
+  var DB_STORE = "documents";
+
+  if (window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  /* ---------------------------------------------------------------------
+     Tiny IndexedDB wrapper (blueprint images can exceed localStorage quota)
+  --------------------------------------------------------------------- */
+  var dbPromise = new Promise(function(resolve, reject){
+    var req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function(){
+      req.result.createObjectStore(DB_STORE, { keyPath: "id" });
+    };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error); };
+  });
+
+  function withStore(mode, fn){
+    return dbPromise.then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(DB_STORE, mode);
+        var store = tx.objectStore(DB_STORE);
+        var result = fn(store);
+        tx.oncomplete = function(){ resolve(result); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+
+  function dbGetAll(){
+    return withStore("readonly", function(store){
+      var out = [];
+      return new Promise(function(res){
+        var cursorReq = store.openCursor();
+        cursorReq.onsuccess = function(e){
+          var cursor = e.target.result;
+          if (cursor){ out.push(cursor.value); cursor.continue(); }
+          else { res(out); }
+        };
+      });
+    }).then(function(p){ return p; });
+  }
+
+  function dbPut(doc){
+    return withStore("readwrite", function(store){ store.put(doc); });
+  }
+
+  function dbDelete(id){
+    return withStore("readwrite", function(store){ store.delete(id); });
+  }
+
+  /* ---------------------------------------------------------------------
+     State
+  --------------------------------------------------------------------- */
+  var state = {
+    docs: [],
+    currentDocId: null,
+    currentPage: 0,
+    isAdmin: false,
+    drawing: false,
+    editingRegionId: null,
+    draft: null
+  };
+
+  /* ---------------------------------------------------------------------
+     DOM refs
+  --------------------------------------------------------------------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var docSelect = $("docSelect");
+  var uploadGroup = $("uploadGroup");
+  var fileInput = $("fileInput");
+  var adminToggleBtn = $("adminToggleBtn");
+  var adminPinWrap = $("adminPinWrap");
+  var pinInput = $("pinInput");
+  var pinSubmit = $("pinSubmit");
+  var pinCancel = $("pinCancel");
+  var adminActiveBadge = $("adminActiveBadge");
+  var adminOnlyTools = $("adminOnlyTools");
+  var dataToolsGroup = $("dataToolsGroup");
+  var addRegionBtn = $("addRegionBtn");
+  var renameDocBtn = $("renameDocBtn");
+  var deleteDocBtn = $("deleteDocBtn");
+  var exportBtn = $("exportBtn");
+  var importBtn = $("importBtn");
+  var importFile = $("importFile");
+  var emptyState = $("emptyState");
+  var viewerBody = $("viewerBody");
+  var pageTabs = $("pageTabs");
+  var imageWrap = $("imageWrap");
+  var pageImage = $("pageImage");
+  var drawLayer = $("drawLayer");
+  var activeDescription = $("activeDescription");
+  var regionList = $("regionList");
+  var regionCount = $("regionCount");
+  var statusLive = $("statusLive");
+  var regionDialog = $("regionDialog");
+  var regionForm = $("regionForm");
+  var regionDialogTitle = $("regionDialogTitle");
+  var regionShort = $("regionShort");
+  var regionLong = $("regionLong");
+  var shortCount = $("shortCount");
+  var longCount = $("longCount");
+  var deleteRegionBtn = $("deleteRegionBtn");
+  var regionCancelBtn = $("regionCancelBtn");
+
+  function announce(msg){
+    statusLive.textContent = "";
+    window.setTimeout(function(){ statusLive.textContent = msg; }, 30);
+  }
+
+  function currentDoc(){
+    return state.docs.find(function(d){ return d.id === state.currentDocId; }) || null;
+  }
+
+  /* ---------------------------------------------------------------------
+     Init
+  --------------------------------------------------------------------- */
+  dbGetAll().then(function(docs){
+    state.docs = docs.sort(function(a,b){ return a.createdAt - b.createdAt; });
+    refreshDocSelect();
+    if (state.docs.length){
+      state.currentDocId = state.docs[0].id;
+      renderDoc();
+    }
+  });
+
+  function refreshDocSelect(){
+    docSelect.innerHTML = "";
+    if (!state.docs.length){
+      var opt = document.createElement("option");
+      opt.textContent = "No blueprints uploaded";
+      docSelect.appendChild(opt);
+      docSelect.disabled = true;
+      return;
+    }
+    docSelect.disabled = false;
+    state.docs.forEach(function(d){
+      var opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = d.name;
+      docSelect.appendChild(opt);
+    });
+    docSelect.value = state.currentDocId;
+  }
+
+  docSelect.addEventListener("change", function(){
+    state.currentDocId = docSelect.value;
+    state.currentPage = 0;
+    renderDoc();
+  });
+
+  /* ---------------------------------------------------------------------
+     Admin mode toggle
+  --------------------------------------------------------------------- */
+  adminToggleBtn.addEventListener("click", function(){
+    if (state.isAdmin){
+      state.isAdmin = false;
+      document.body.classList.remove("mode-admin");
+      document.body.classList.add("mode-view");
+      adminToggleBtn.setAttribute("aria-pressed", "false");
+      adminToggleBtn.textContent = "Admin mode";
+      adminActiveBadge.style.display = "none";
+      adminOnlyTools.style.display = "none";
+      dataToolsGroup.style.display = "none";
+      uploadGroup.style.display = "none";
+      stopDrawingMode();
+      renderRegions();
+      announce("Admin mode turned off. Viewer mode active.");
+    } else {
+      adminPinWrap.classList.add("show");
+      pinInput.value = "";
+      pinInput.focus();
+    }
+  });
+
+  pinCancel.addEventListener("click", function(){
+    adminPinWrap.classList.remove("show");
+    adminToggleBtn.focus();
+  });
+
+  pinInput.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); pinSubmit.click(); }
+    if (e.key === "Escape"){ pinCancel.click(); }
+  });
+
+  pinSubmit.addEventListener("click", function(){
+    if (pinInput.value === ADMIN_PIN){
+      state.isAdmin = true;
+      document.body.classList.add("mode-admin");
+      document.body.classList.remove("mode-view");
+      adminToggleBtn.setAttribute("aria-pressed", "true");
+      adminToggleBtn.textContent = "Exit admin mode";
+      adminActiveBadge.style.display = "inline-block";
+      adminOnlyTools.style.display = "flex";
+      dataToolsGroup.style.display = "flex";
+      uploadGroup.style.display = "flex";
+      adminPinWrap.classList.remove("show");
+      renderRegions();
+      announce("Admin mode unlocked.");
+    } else {
+      announce("Incorrect PIN. Try again.");
+      pinInput.value = "";
+      pinInput.focus();
+    }
+  });
+
+  /* ---------------------------------------------------------------------
+     Upload — PDF or image
+  --------------------------------------------------------------------- */
+  fileInput.addEventListener("change", function(){
+    var file = fileInput.files[0];
+    if (!file) return;
+    var lower = file.name.toLowerCase();
+    if (lower.endsWith(".pdf")){
+      handlePdfUpload(file);
+    } else if (file.type === "image/png" || file.type === "image/jpeg"){
+      handleImageUpload(file);
+    } else {
+      announce("Unsupported file type. Please upload a PDF, PNG, or JPG. Native CAD files (DWG/DXF) must be exported to PDF first.");
+      alert("This app accepts PDF, PNG, or JPG files. If you have a CAD file, export or print it to PDF first, then upload that.");
+    }
+    fileInput.value = "";
+  });
+
+  function handleImageUpload(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        createDoc(file.name.replace(/\.[^.]+$/, ""), [{
+          dataURL: reader.result,
+          width: img.naturalWidth,
+          height: img.naturalHeight
+        }]);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handlePdfUpload(file){
+    if (!window.pdfjsLib){
+      alert("PDF support did not load. Check your internet connection and try again.");
+      return;
+    }
+    announce("Rendering PDF, please wait.");
+    var reader = new FileReader();
+    reader.onload = function(){
+      var typedArray = new Uint8Array(reader.result);
+      pdfjsLib.getDocument({ data: typedArray }).promise.then(function(pdf){
+        var pagePromises = [];
+        for (var i = 1; i <= pdf.numPages; i++){
+          pagePromises.push(renderPdfPage(pdf, i));
+        }
+        return Promise.all(pagePromises);
+      }).then(function(pages){
+        createDoc(file.name.replace(/\.[^.]+$/, ""), pages);
+      }).catch(function(err){
+        console.error(err);
+        alert("Could not read that PDF. It may be corrupted or password protected.");
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderPdfPage(pdf, pageNum){
+    return pdf.getPage(pageNum).then(function(page){
+      var scale = 2;
+      var viewport = page.getViewport({ scale: scale });
+      var canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      var ctx = canvas.getContext("2d");
+      return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function(){
+        return {
+          dataURL: canvas.toDataURL("image/png"),
+          width: canvas.width,
+          height: canvas.height
+        };
+      });
+    });
+  }
+
+  function createDoc(name, pages){
+    var doc = {
+      id: "doc_" + Date.now(),
+      name: name || "Untitled blueprint",
+      createdAt: Date.now(),
+      pages: pages,
+      regions: []
+    };
+    dbPut(doc).then(function(){
+      state.docs.push(doc);
+      state.currentDocId = doc.id;
+      state.currentPage = 0;
+      refreshDocSelect();
+      renderDoc();
+      announce("Blueprint \"" + doc.name + "\" uploaded with " + pages.length + " page" + (pages.length===1?"":"s") + ".");
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+     Rename / delete document
+  --------------------------------------------------------------------- */
+  renameDocBtn.addEventListener("click", function(){
+    var doc = currentDoc();
+    if (!doc) return;
+    var name = window.prompt("Rename blueprint:", doc.name);
+    if (name && name.trim()){
+      doc.name = name.trim();
+      dbPut(doc).then(function(){
+        refreshDocSelect();
+        announce("Blueprint renamed to " + doc.name + ".");
+      });
+    }
+  });
+
+  deleteDocBtn.addEventListener("click", function(){
+    var doc = currentDoc();
+    if (!doc) return;
+    if (!window.confirm("Delete \"" + doc.name + "\" and all its regions? This cannot be undone.")) return;
+    dbDelete(doc.id).then(function(){
+      state.docs = state.docs.filter(function(d){ return d.id !== doc.id; });
+      state.currentDocId = state.docs.length ? state.docs[0].id : null;
+      state.currentPage = 0;
+      refreshDocSelect();
+      renderDoc();
+      announce("Blueprint deleted.");
+    });
+  });
+
+  /* ---------------------------------------------------------------------
+     Export / import
+  --------------------------------------------------------------------- */
+  exportBtn.addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state.docs, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "blueprint-access-export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  importBtn.addEventListener("click", function(){ importFile.click(); });
+  importFile.addEventListener("change", function(){
+    var file = importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try {
+        var imported = JSON.parse(reader.result);
+        if (!Array.isArray(imported)) throw new Error("bad format");
+        var chain = Promise.resolve();
+        imported.forEach(function(doc){
+          if (!doc.id) doc.id = "doc_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+          chain = chain.then(function(){ return dbPut(doc); });
+        });
+        chain.then(function(){
+          return dbGetAll();
+        }).then(function(docs){
+          state.docs = docs.sort(function(a,b){ return a.createdAt - b.createdAt; });
+          refreshDocSelect();
+          announce("Import complete.");
+        });
+      } catch(e){
+        alert("That file could not be read as a Blueprint Access export.");
+      }
+    };
+    reader.readAsText(file);
+    importFile.value = "";
+  });
+
+  /* ---------------------------------------------------------------------
+     Render current document
+  --------------------------------------------------------------------- */
+  function renderDoc(){
+    var doc = currentDoc();
+    if (!doc){
+      emptyState.style.display = "block";
+      viewerBody.style.display = "none";
+      renameDocBtn.disabled = true;
+      deleteDocBtn.disabled = true;
+      return;
+    }
+    emptyState.style.display = "none";
+    viewerBody.style.display = "block";
+    renameDocBtn.disabled = false;
+    deleteDocBtn.disabled = false;
+
+    renderPageTabs(doc);
+    renderPage(doc);
+  }
+
+  function renderPageTabs(doc){
+    pageTabs.innerHTML = "";
+    if (doc.pages.length <= 1){
+      pageTabs.style.display = "none";
+      return;
+    }
+    pageTabs.style.display = "flex";
+    doc.pages.forEach(function(p, idx){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", String(idx === state.currentPage));
+      b.textContent = "Page " + (idx + 1);
+      b.addEventListener("click", function(){
+        state.currentPage = idx;
+        renderPageTabs(doc);
+        renderPage(doc);
+      });
+      pageTabs.appendChild(b);
+    });
+  }
+
+  function renderPage(doc){
+    var page = doc.pages[state.currentPage];
+    pageImage.src = page.dataURL;
+    pageImage.alt = "";
+    pageImage.setAttribute("role", "presentation");
+    renderRegions();
+    activeDescription.innerHTML = '<p class="empty">Select or focus a region to see its full description here.</p>';
+  }
+
+  /* ---------------------------------------------------------------------
+     Regions: render overlays + list
+  --------------------------------------------------------------------- */
+  function currentPageRegions(){
+    var doc = currentDoc();
+    if (!doc) return [];
+    return doc.regions
+      .filter(function(r){ return r.page === state.currentPage; })
+      .sort(function(a,b){ return a.order - b.order; });
+  }
+
+  function renderRegions(){
+    // clear existing overlays (keep drawLayer's draft rect logic separate)
+    Array.prototype.slice.call(imageWrap.querySelectorAll(".region-overlay")).forEach(function(el){ el.remove(); });
+
+    var regions = currentPageRegions();
+    regionCount.textContent = regions.length ? "(" + regions.length + ")" : "";
+
+    regions.forEach(function(r, idx){
+      var el = document.createElement(state.isAdmin ? "button" : "button");
+      el.type = "button";
+      el.className = "region-overlay";
+      el.style.left = r.x + "%";
+      el.style.top = r.y + "%";
+      el.style.width = r.w + "%";
+      el.style.height = r.h + "%";
+      el.setAttribute("aria-label", (idx + 1) + ". " + r.shortText);
+      if (r.longText){
+        var descId = "desc-" + r.id;
+        var hidden = document.createElement("span");
+        hidden.className = "sr-only";
+        hidden.id = descId;
+        hidden.textContent = r.longText;
+        el.appendChild(hidden);
+        el.setAttribute("aria-describedby", descId);
+      }
+      var badge = document.createElement("span");
+      badge.className = "badge";
+      badge.setAttribute("aria-hidden", "true");
+      badge.textContent = idx + 1;
+      el.appendChild(badge);
+
+      el.addEventListener("focus", function(){ showActiveDescription(r, idx); });
+      el.addEventListener("click", function(){
+        if (state.isAdmin){
+          openRegionDialog(r);
+        } else {
+          showActiveDescription(r, idx);
+        }
+      });
+      imageWrap.insertBefore(el, drawLayer);
+    });
+
+    renderRegionListSidebar(regions);
+  }
+
+  function showActiveDescription(r, idx){
+    activeDescription.innerHTML =
+      '<p class="title">' + (idx + 1) + '. ' + escapeHtml(r.shortText) + '</p>' +
+      (r.longText ? '<p>' + escapeHtml(r.longText) + '</p>' : '<p class="empty">No additional detail provided.</p>');
+    announce("Region " + (idx + 1) + " of " + currentPageRegions().length + ": " + r.shortText + (r.longText ? ". " + r.longText : ""));
+  }
+
+  function renderRegionListSidebar(regions){
+    regionList.innerHTML = "";
+    if (!regions.length){
+      var li = document.createElement("li");
+      li.style.padding = "10px 6px";
+      li.style.color = "var(--text-muted)";
+      li.textContent = state.isAdmin
+        ? "No regions yet. Use \"Add region\" to draw one on the blueprint."
+        : "No regions have been added to this page yet.";
+      regionList.appendChild(li);
+      return;
+    }
+    regions.forEach(function(r, idx){
+      var li = document.createElement("li");
+      var row = document.createElement("div");
+      row.className = "region-list-admin-row";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "region-list-btn";
+      btn.innerHTML =
+        '<span class="num" aria-hidden="true">' + (idx + 1) + '</span>' +
+        '<span class="lbl"><span class="short"></span><span class="long" style="color:var(--text-muted);"></span></span>';
+      btn.querySelector(".short").textContent = r.shortText;
+      btn.querySelector(".long").textContent = r.longText || "";
+      btn.setAttribute("aria-describedby", "");
+      btn.addEventListener("click", function(){
+        var overlay = imageWrap.querySelectorAll(".region-overlay")[idx];
+        if (overlay){ overlay.focus(); overlay.scrollIntoView({ block: "center", behavior: "smooth" }); }
+        showActiveDescription(r, idx);
+      });
+      row.appendChild(btn);
+
+      if (state.isAdmin){
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "icon-btn";
+        editBtn.textContent = "Edit";
+        editBtn.setAttribute("aria-label", "Edit region " + (idx + 1) + ": " + r.shortText);
+        editBtn.addEventListener("click", function(){ openRegionDialog(r); });
+        row.appendChild(editBtn);
+      }
+
+      li.appendChild(row);
+      regionList.appendChild(li);
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* ---------------------------------------------------------------------
+     Admin: draw new region
+  --------------------------------------------------------------------- */
+  addRegionBtn.addEventListener("click", function(){
+    if (!currentDoc()) return;
+    startDrawingMode();
+  });
+
+  function startDrawingMode(){
+    state.drawing = true;
+    document.body.classList.add("drawing-active");
+    addRegionBtn.classList.add("active-tool");
+    addRegionBtn.textContent = "Click and drag on the blueprint…";
+    announce("Draw mode on. Click and drag on the blueprint to mark a region.");
+  }
+
+  function stopDrawingMode(){
+    state.drawing = false;
+    document.body.classList.remove("drawing-active");
+    addRegionBtn.classList.remove("active-tool");
+    addRegionBtn.textContent = "+ Add region";
+  }
+
+  var dragStart = null;
+  var draftEl = null;
+
+  drawLayer.addEventListener("mousedown", function(e){
+    if (!state.drawing) return;
+    var rect = imageWrap.getBoundingClientRect();
+    dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    draftEl = document.createElement("div");
+    draftEl.className = "draft-rect";
+    imageWrap.appendChild(draftEl);
+    updateDraftRect(dragStart.x, dragStart.y, 0, 0);
+    e.preventDefault();
+  });
+
+  window.addEventListener("mousemove", function(e){
+    if (!state.drawing || !dragStart) return;
+    var rect = imageWrap.getBoundingClientRect();
+    var curX = e.clientX - rect.left;
+    var curY = e.clientY - rect.top;
+    var x = Math.min(dragStart.x, curX);
+    var y = Math.min(dragStart.y, curY);
+    var w = Math.abs(curX - dragStart.x);
+    var h = Math.abs(curY - dragStart.y);
+    updateDraftRect(x, y, w, h);
+  });
+
+  window.addEventListener("mouseup", function(e){
+    if (!state.drawing || !dragStart) return;
+    var rect = imageWrap.getBoundingClientRect();
+    var curX = e.clientX - rect.left;
+    var curY = e.clientY - rect.top;
+    var x = Math.min(dragStart.x, curX);
+    var y = Math.min(dragStart.y, curY);
+    var w = Math.abs(curX - dragStart.x);
+    var h = Math.abs(curY - dragStart.y);
+    dragStart = null;
+
+    if (draftEl){ draftEl.remove(); draftEl = null; }
+    stopDrawingMode();
+
+    if (w < 8 || h < 8){
+      announce("Region too small, try again.");
+      return;
+    }
+
+    var pct = {
+      x: (x / rect.width) * 100,
+      y: (y / rect.height) * 100,
+      w: (w / rect.width) * 100,
+      h: (h / rect.height) * 100
+    };
+    state.draft = pct;
+    openRegionDialog(null);
+  });
+
+  function updateDraftRect(x, y, w, h){
+    draftEl.style.left = x + "px";
+    draftEl.style.top = y + "px";
+    draftEl.style.width = w + "px";
+    draftEl.style.height = h + "px";
+  }
+
+  /* ---------------------------------------------------------------------
+     Region dialog (add / edit)
+  --------------------------------------------------------------------- */
+  var dialogReturnFocus = null;
+
+  function openRegionDialog(region){
+    dialogReturnFocus = document.activeElement;
+    state.editingRegionId = region ? region.id : null;
+    regionDialogTitle.textContent = region ? "Edit region" : "Add region";
+    regionShort.value = region ? region.shortText : "";
+    regionLong.value = region ? (region.longText || "") : "";
+    shortCount.textContent = regionShort.value.length;
+    longCount.textContent = regionLong.value.length;
+    deleteRegionBtn.style.display = region ? "inline-block" : "none";
+    regionDialog.showModal();
+    regionShort.focus();
+  }
+
+  regionShort.addEventListener("input", function(){ shortCount.textContent = regionShort.value.length; });
+  regionLong.addEventListener("input", function(){ longCount.textContent = regionLong.value.length; });
+
+  regionCancelBtn.addEventListener("click", function(){
+    regionDialog.close();
+  });
+
+  regionDialog.addEventListener("close", function(){
+    state.draft = null;
+    state.editingRegionId = null;
+    if (dialogReturnFocus && document.contains(dialogReturnFocus)){ dialogReturnFocus.focus(); }
+  });
+
+  regionForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    var doc = currentDoc();
+    if (!doc) return;
+    var shortText = regionShort.value.trim();
+    if (!shortText) return;
+    var longText = regionLong.value.trim();
+
+    if (state.editingRegionId){
+      var existing = doc.regions.find(function(r){ return r.id === state.editingRegionId; });
+      if (existing){
+        existing.shortText = shortText;
+        existing.longText = longText;
+      }
+    } else if (state.draft){
+      var maxOrder = doc.regions
+        .filter(function(r){ return r.page === state.currentPage; })
+        .reduce(function(m, r){ return Math.max(m, r.order); }, -1);
+      doc.regions.push({
+        id: "region_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+        page: state.currentPage,
+        x: state.draft.x, y: state.draft.y, w: state.draft.w, h: state.draft.h,
+        shortText: shortText,
+        longText: longText,
+        order: maxOrder + 1
+      });
+    }
+
+    dbPut(doc).then(function(){
+      renderRegions();
+      regionDialog.close();
+      announce("Region saved.");
+    });
+  });
+
+  deleteRegionBtn.addEventListener("click", function(){
+    var doc = currentDoc();
+    if (!doc || !state.editingRegionId) return;
+    if (!window.confirm("Delete this region?")) return;
+    doc.regions = doc.regions.filter(function(r){ return r.id !== state.editingRegionId; });
+    dbPut(doc).then(function(){
+      renderRegions();
+      regionDialog.close();
+      announce("Region deleted.");
+    });
+  });
+
+  regionDialog.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ regionDialog.close(); }
+  });
+
+})();
+</script>
+</body>
+</html>
